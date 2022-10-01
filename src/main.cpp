@@ -91,7 +91,7 @@ int main() {
     if (bestDevice.gpu) {
         std::cout << "Found GPU!" << std::endl;
     } else {
-        std::cout << "No GPU use other type of device." << std::endl;
+        std::cout << "No GPU. Using other type of device." << std::endl;
     }
 
 
