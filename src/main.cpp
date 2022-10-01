@@ -244,7 +244,7 @@ int main() {
         // - Флопс - это число операций с плавающей точкой в секунду
         // - В гигафлопсе 10^9 флопсов
         // - Среднее время выполнения кернела равно t.lapAvg() секунд
-        std::cout << "GFlops: " << 1. / t.lapAvg() * 1e-9  << std::endl;
+        std::cout << "GFlops: " << n / t.lapAvg() * 1e-9  << std::endl;
 
         // 14 Рассчитайте используемую пропускную способность обращений к видеопамяти (в гигабайтах в секунду)
         // - Всего элементов в массивах по n штук
@@ -264,7 +264,7 @@ int main() {
             t.nextLap();
         }
         std::cout << "Result data transfer time: " << t.lapAvg() << "+-" << t.lapStd() << " s" << std::endl;
-        std::cout << "VRAM -> RAM bandwidth: " << 3.*n*sizeof(float) / (t.lapAvg() * std::pow(1024, 3)) << " GB/s" << std::endl;
+        std::cout << "VRAM -> RAM bandwidth: " << n*sizeof(float) / (t.lapAvg() * std::pow(1024, 3)) << " GB/s" << std::endl;
     }
 
     // 16 Сверьте результаты вычислений со сложением чисел на процессоре (и убедитесь, что если в кернеле сделать
