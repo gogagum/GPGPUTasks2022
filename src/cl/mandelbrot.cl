@@ -43,7 +43,7 @@ __kernel void mandelbrot(__global float* results,
 
     float result = iter;
     if (iter != iters) {
-        result = result - log(log(sqrt(x * x + y * y)) / log(threshold)) / log(2.0f);
+        result = result - log(log(hypot(x, y)) / log(threshold)) / log(2.0f);
     }
 
     result = 1.0f * result / iters;
