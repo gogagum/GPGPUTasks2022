@@ -8,7 +8,8 @@
 
 template<typename T>
 void raiseFail(const T &a, const T &b,
-               std::string message, std::string filename, int line)
+               const std::string& message,
+               const std::string& filename, int line)
 {
     if (a != b) {
         std::cerr << message << " But " << a << " != " << b << ", "
@@ -19,6 +20,46 @@ void raiseFail(const T &a, const T &b,
 
 #define EXPECT_THE_SAME(a, b, message) raiseFail(a, b, message, __FILE__, __LINE__)
 
+const unsigned int workGroupSize = 128;
+
+void perform_gpu_calculations(const gpu::Device& device,
+                              const std::vector<unsigned int>& as,
+                              const std::string& kernelName,
+                              std::size_t iterationsCnt,
+                              unsigned int globalWorkSize,
+                              unsigned int referenceSum) {
+  gpu::Context ctx;
+  ctx.init(device.device_id_opencl);
+  ctx.activate();
+
+  gpu::gpu_mem_32u gpuNums;
+  gpuNums.resizeN(as.size());
+  gpuNums.writeN(as.data(), as.size());
+
+  gpu::gpu_mem_32u gpuRes;
+  gpuRes.resizeN(1);
+
+  ocl::Kernel baseline_kernel(sum_kernel, sum_kernel_length, kernelName);
+  baseline_kernel.compile();
+
+  timer t;
+  for (std::size_t iter = 0; iter < iterationsCnt; ++iter) {
+      unsigned int res = 0;
+      gpuRes.writeN(&res, 1);
+      baseline_kernel.exec(gpu::WorkSize(workGroupSize, globalWorkSize),
+                           gpuNums, gpuRes, static_cast<unsigned int>(as.size()));
+      gpuRes.readN(&res, 1);
+      EXPECT_THE_SAME(referenceSum, res,
+                      "GPU " + kernelName + " result should be consistent!");
+      t.nextLap();
+  }
+  std::cout << "GPU " + kernelName + ": " << t.lapAvg() << "+-" << t.lapStd()
+            << " s" << std::endl;
+  std::cout << "GPU " + kernelName + ": "
+            << (double(as.size())/1000.0/1000.0) / t.lapAvg()
+            << " millions/s" << std::endl;
+
+}
 
 int main(int argc, char **argv)
 {
@@ -29,7 +70,7 @@ int main(int argc, char **argv)
     std::vector<unsigned int> as(n, 0);
     FastRandom r(42);
     for (int i = 0; i < n; ++i) {
-        as[i] = (unsigned int)r.next(0, std::numeric_limits<unsigned int>::max() / n);
+        as[i] = static_cast<unsigned int>(r.next(0, std::numeric_limits<int>::max() / int(n)));
         reference_sum += as[i];
     }
 
@@ -68,157 +109,28 @@ int main(int argc, char **argv)
                   << " millions/s" << std::endl;
     }
 
-    gpu::Device device = gpu::chooseGPUDevice(argc, argv);
-    unsigned int workGroupSize = 128;
-    unsigned int globalWorkSize = (n + workGroupSize - 1) / workGroupSize * workGroupSize;
-
     {
-        gpu::Context ctx;
-        ctx.init(device.device_id_opencl);
-        ctx.activate();
+        gpu::Device device = gpu::chooseGPUDevice(argc, argv);
+        unsigned int globalWorkSize =
+            (n + workGroupSize - 1) / workGroupSize * workGroupSize;
 
-        gpu::gpu_mem_32u gpuNums;
-        gpuNums.resizeN(n);
-        gpuNums.writeN(as.data(), n);
+        const size_t gpuBenchmarkIters = 100;
 
-        gpu::gpu_mem_32u gpuRes;
-        gpuRes.resizeN(1);
+        perform_gpu_calculations(device, as, "sum_baseline", gpuBenchmarkIters,
+                                 globalWorkSize, reference_sum);
 
-        ocl::Kernel baseline_kernel(sum_kernel, sum_kernel_length, "sum_baseline");
-        baseline_kernel.compile();
+        perform_gpu_calculations(device, as, "sum_cycle", gpuBenchmarkIters,
+                                 globalWorkSize, reference_sum);
 
-        timer t;
-        for (std::size_t iter = 0; iter < benchmarkingIters; ++iter) {
-            unsigned int res = 0;
-            gpuRes.writeN(&res, 1);
-            baseline_kernel.exec(gpu::WorkSize(workGroupSize, globalWorkSize), gpuNums, gpuRes, n);
-            gpuRes.readN(&res, 1);
-            EXPECT_THE_SAME(reference_sum, res, "GPU baseline result should be consistent!");
-            t.nextLap();
-        }
-        std::cout << "GPU baseline: " << t.lapAvg() << "+-" << t.lapStd() << " s"
-                  << std::endl;
-        std::cout << "GPU baseline: " << (n/1000.0/1000.0) / t.lapAvg()
-                  << " millions/s" << std::endl;
-    }
+        perform_gpu_calculations(device, as, "sum_cycle_coalesced",
+                                 gpuBenchmarkIters, globalWorkSize,
+                                 reference_sum);
 
-    {
-      gpu::Context ctx;
-      ctx.init(device.device_id_opencl);
-      ctx.activate();
+        perform_gpu_calculations(device, as, "sum_cycle_coalesced_local",
+                                 gpuBenchmarkIters, globalWorkSize,
+                                 reference_sum);
 
-      gpu::gpu_mem_32u gpuNums;
-      gpuNums.resizeN(n);
-      gpuNums.writeN(as.data(), n);
-
-      gpu::gpu_mem_32u gpuRes;
-      gpuRes.resizeN(1);
-
-      ocl::Kernel baseline_kernel(sum_kernel, sum_kernel_length, "sum_cycle");
-      baseline_kernel.compile();
-
-      timer t;
-      for (std::size_t iter = 0; iter < benchmarkingIters; ++iter) {
-        unsigned int res = 0;
-        gpuRes.writeN(&res, 1);
-        baseline_kernel.exec(gpu::WorkSize(workGroupSize, globalWorkSize), gpuNums, gpuRes, n);
-        gpuRes.readN(&res, 1);
-        EXPECT_THE_SAME(reference_sum, res, "GPU cycle result should be consistent!");
-        t.nextLap();
-      }
-      std::cout << "GPU cycle: " << t.lapAvg() << "+-" << t.lapStd() << " s"
-                << std::endl;
-      std::cout << "GPU cycle: " << (n/1000.0/1000.0) / t.lapAvg()
-                << " millions/s" << std::endl;
-    }
-
-    {
-      gpu::Context ctx;
-      ctx.init(device.device_id_opencl);
-      ctx.activate();
-
-      gpu::gpu_mem_32u gpuNums;
-      gpuNums.resizeN(n);
-      gpuNums.writeN(as.data(), n);
-
-      gpu::gpu_mem_32u gpuRes;
-      gpuRes.resizeN(1);
-
-      ocl::Kernel baseline_kernel(sum_kernel, sum_kernel_length, "sum_cycle_coalesced");
-      baseline_kernel.compile();
-
-      timer t;
-      for (std::size_t iter = 0; iter < benchmarkingIters; ++iter) {
-        unsigned int res = 0;
-        gpuRes.writeN(&res, 1);
-        baseline_kernel.exec(gpu::WorkSize(workGroupSize, globalWorkSize), gpuNums, gpuRes, n);
-        gpuRes.readN(&res, 1);
-        EXPECT_THE_SAME(reference_sum, res, "GPU cycle_coalesced result should be consistent!");
-        t.nextLap();
-      }
-      std::cout << "GPU cycle_coalesced: " << t.lapAvg() << "+-" << t.lapStd() << " s"
-                << std::endl;
-      std::cout << "GPU cycle_coalesced: " << (n/1000.0/1000.0) / t.lapAvg()
-                << " millions/s" << std::endl;
-    }
-
-    {
-      gpu::Context ctx;
-      ctx.init(device.device_id_opencl);
-      ctx.activate();
-
-      gpu::gpu_mem_32u gpuNums;
-      gpuNums.resizeN(n);
-      gpuNums.writeN(as.data(), n);
-
-      gpu::gpu_mem_32u gpuRes;
-      gpuRes.resizeN(1);
-
-      ocl::Kernel baseline_kernel(sum_kernel, sum_kernel_length, "sum_cycle_coalesced_local");
-      baseline_kernel.compile();
-
-      timer t;
-      for (std::size_t iter = 0; iter < benchmarkingIters; ++iter) {
-        unsigned int res = 0;
-        gpuRes.writeN(&res, 1);
-        baseline_kernel.exec(gpu::WorkSize(workGroupSize, globalWorkSize), gpuNums, gpuRes, n);
-        gpuRes.readN(&res, 1);
-        EXPECT_THE_SAME(reference_sum, res, "GPU cycle_coalesced_local result should be consistent!");
-        t.nextLap();
-      }
-      std::cout << "GPU cycle_coalesced_local: " << t.lapAvg() << "+-" << t.lapStd() << " s"
-                << std::endl;
-      std::cout << "GPU cycle_coalesced_local: " << (n/1000.0/1000.0) / t.lapAvg()
-                << " millions/s" << std::endl;
-    }
-
-    {
-      gpu::Context ctx;
-      ctx.init(device.device_id_opencl);
-      ctx.activate();
-
-      gpu::gpu_mem_32u gpuNums;
-      gpuNums.resizeN(n);
-      gpuNums.writeN(as.data(), n);
-
-      gpu::gpu_mem_32u gpuRes;
-      gpuRes.resizeN(1);
-
-      ocl::Kernel baseline_kernel(sum_kernel, sum_kernel_length, "sum_tree");
-      baseline_kernel.compile();
-
-      timer t;
-      for (std::size_t iter = 0; iter < benchmarkingIters; ++iter) {
-        unsigned int res = 0;
-        gpuRes.writeN(&res, 1);
-        baseline_kernel.exec(gpu::WorkSize(workGroupSize, globalWorkSize), gpuNums, gpuRes, n);
-        gpuRes.readN(&res, 1);
-        EXPECT_THE_SAME(reference_sum, res, "GPU tree result should be consistent!");
-        t.nextLap();
-      }
-      std::cout << "GPU tree: " << t.lapAvg() << "+-" << t.lapStd() << " s"
-                << std::endl;
-      std::cout << "GPU tree: " << (n/1000.0/1000.0) / t.lapAvg()
-                << " millions/s" << std::endl;
+        perform_gpu_calculations(device, as, "sum_tree", gpuBenchmarkIters,
+                                 globalWorkSize, reference_sum);
     }
 }
