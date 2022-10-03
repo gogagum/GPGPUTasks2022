@@ -86,6 +86,10 @@ int main() {
         }
     }
 
+    if (devicesCompared.empty()) {
+        throw std::runtime_error("No OpenCL devices were found!");
+    }
+
     auto bestDevice = devicesCompared.top();
 
     if (bestDevice.gpu) {
@@ -278,6 +282,7 @@ int main() {
     OCL_SAFE_CALL(clReleaseMemObject(buffA));
     OCL_SAFE_CALL(clReleaseMemObject(buffB));
     OCL_SAFE_CALL(clReleaseMemObject(buffC));
+    OCL_SAFE_CALL(clReleaseKernel(kernel));
     OCL_SAFE_CALL(clReleaseCommandQueue(cmdQueue));
     OCL_SAFE_CALL(clReleaseContext(ctx));
 
