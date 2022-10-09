@@ -114,7 +114,7 @@ int main(int argc, char **argv)
         unsigned int globalWorkSize =
             (n + workGroupSize - 1) / workGroupSize * workGroupSize;
 
-        const size_t gpuBenchmarkIters = 100;
+        const size_t gpuBenchmarkIters = 50;
 
         perform_gpu_calculations(device, as, "sum_baseline", gpuBenchmarkIters,
                                  globalWorkSize, reference_sum);
@@ -122,8 +122,10 @@ int main(int argc, char **argv)
         perform_gpu_calculations(device, as, "sum_cycle", gpuBenchmarkIters,
                                  globalWorkSize, reference_sum);
 
+        unsigned int valuesPerWorkItem = 64;
+
         perform_gpu_calculations(device, as, "sum_cycle_coalesced",
-                                 gpuBenchmarkIters, globalWorkSize,
+                                 gpuBenchmarkIters, globalWorkSize / valuesPerWorkItem,
                                  reference_sum);
 
         perform_gpu_calculations(device, as, "sum_cycle_coalesced_local",
