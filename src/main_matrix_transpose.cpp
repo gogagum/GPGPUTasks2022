@@ -8,7 +8,6 @@
 
 #include <vector>
 #include <iostream>
-#include <stdexcept>
 
 
 int main(int argc, char **argv)
@@ -39,14 +38,19 @@ int main(int argc, char **argv)
 
     as_gpu.writeN(as.data(), M*K);
 
+    const std::size_t workgroup_size = 16;
+    const std::string def = "-D WORKGROUP_SIZE=" + std::to_string(workgroup_size);
+
     ocl::Kernel matrix_transpose_kernel(matrix_transpose,
                                         matrix_transpose_length,
-                                        "matrix_transpose");
+                                        "matrix_transpose",
+                                        def);
     matrix_transpose_kernel.compile();
 
     ocl::Kernel matrix_transpose_simple_kernel(matrix_transpose,
                                                matrix_transpose_length,
-                                               "matrix_transpose_simple");
+                                               "matrix_transpose_simple",
+                                               def);
 
     matrix_transpose_simple_kernel.compile();
 
