@@ -83,10 +83,9 @@ int main(int argc, char **argv)
 
     {
         timer t;
-        const std::size_t piece_size = 32;
         for (int iter = 0; iter < benchmarkingIters; ++iter) {
-            const unsigned int squares_N = (N - 1) / piece_size + 1;
-            const unsigned int squares_M = (M - 1) / piece_size + 1;
+            const unsigned int squares_N = (N - 1) / block_size + 1;
+            const unsigned int squares_M = (M - 1) / block_size + 1;
             const unsigned int global_work_size_N = squares_N * block_size;
             const unsigned int global_work_size_M = squares_M * block_size;
             matrix_multiplication_kernel.exec(gpu::WorkSize(block_size,
@@ -108,8 +107,9 @@ int main(int argc, char **argv)
     for (int i = 0; i < M * N; ++i) {
         double a = cs[i];
         double b = cs_cpu_reference[i];
-        if (a != 0.0 && b != 0.0) {
-            double diff = fabs(a - b) / std::max(fabs(a), fabs(b));
+        if (std::abs(a) > std::numeric_limits<double>::epsilon()
+            || std::abs(b) > std::numeric_limits<double>::epsilon()) {
+            double diff = std::fabs(a - b) / std::max(fabs(a), fabs(b));
             diff_sum += diff;
         }
     }

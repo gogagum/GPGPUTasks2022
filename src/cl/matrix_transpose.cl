@@ -29,10 +29,16 @@ __kernel void matrix_transpose(__global const float* data,
 
     __local float working_part[WORKGROUP_SIZE][WORKGROUP_SIZE];
 
+    const unsigned int local_i = get_local_id(0);
+    const unsigned int local_j = get_local_id(1);
+
     if (global_i < M && global_j < K) {
-      const unsigned int local_i = get_local_id(0);
-      const unsigned int local_j = get_local_id(1);
-      working_part[local_i][local_j] = data[global_i * K + global_j];
-      data_out[global_j * M + global_i] = working_part[local_i][local_j];
+      working_part[local_i][local_j] = data[global_j * K + global_i];
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (global_j < K && global_i < M) {
+        data_out[global_i * M + global_j] = working_part[local_i][local_j];
     }
 }

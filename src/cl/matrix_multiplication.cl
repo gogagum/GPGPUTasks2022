@@ -29,7 +29,7 @@ __kernel void matrix_multiplication(__global const float* first_data,
     // индекса блока -- k_base.
     const unsigned int j_a = j_base + l_local;  // Индекс столбца в первой матрице
     const unsigned int j_b = j_base + i_local;  // Индекс строки во второй матрице
-    first_local_block[i_local][l_local] = (i < N && j_a < M)
+    first_local_block[l_local][i_local] = (i < N && j_a < M)
                                           ? first_data[i * N + j_a]
                                           : 0;
     second_local_block[i_local][l_local] =
@@ -40,7 +40,7 @@ __kernel void matrix_multiplication(__global const float* first_data,
     barrier(CLK_LOCAL_MEM_FENCE);
 
     for (unsigned int k_local = 0; k_local < BLOCK_SIZE; ++k_local) {
-      result += first_local_block[i_local][k_local]
+      result += first_local_block[k_local][i_local]
                 * second_local_block[k_local][l_local];
     }
     barrier(CLK_LOCAL_MEM_FENCE);
