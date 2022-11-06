@@ -27,30 +27,30 @@ merge(const __global float* arr, __global float* res_arr,
         // Есть от max(ind - len2, 0) до min(n, ind) меньших элементов в первом массиве.
         // Ищем кандидата в первой половине и во второй половине.
 
-        unsigned int ind = global_id - begin1;
-        unsigned int left = (ind > len2) ? ind - len2 : 0;
-        unsigned int right = min(n, ind);
+        const unsigned int i = global_id - begin1;
+        unsigned int l = (i > len2) ? i - len2 : 0;
+        unsigned int r = (n > i) ? i : n;
 
-        while (left < right) {
-            unsigned int mid = (left + right) / 2;
-            if (first_part[mid] < second_part[ind - mid - 1]) {
-                left = mid + 1;
+        while (l < r) {
+            unsigned int mid = (l + r) / 2;
+            if (first_part[mid] < second_part[i - mid - 1]) {
+                l = mid + 1;
             } else {
-                right = mid;
+                r = mid;
             }
         }
 
-        const unsigned int offset = right;
+        const unsigned int offset = r;
 
         const unsigned int i1 = offset;
-        const unsigned int i2 = ind - offset;
+        const unsigned int i2 = i - offset;
 
         if (i1 < len1)
             if (i2 >= len2 || first_part[i1] <= second_part[i2])
-                res_arr_part[ind] = first_part[i1];
+                res_arr_part[i] = first_part[i1];
             else
-                res_arr_part[ind] = second_part[i2];
+                res_arr_part[i] = second_part[i2];
         else
-            res_arr_part[ind] = second_part[i2];
+            res_arr_part[i] = second_part[i2];
     }
 }
