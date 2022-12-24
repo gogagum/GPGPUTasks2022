@@ -44,7 +44,6 @@ vec4 sdBody(vec3 p, vec3 color)
     float d = 1e10;
 
     // body, two spheres with smoothmin
-    // TODO
     float d_low = sdSphere((p - vec3(0.0, 0.35, -0.7)), 0.35);
     float d_high = sdSphere((p - vec3(0.0, 0.65, -0.7)), 0.25);
 
@@ -137,8 +136,6 @@ vec4 sdMonster(vec3 p, vec3 color)
 {
     // при рисовании сложного объекта из нескольких SDF, удобно на верхнем уровне
     // модифицировать p, чтобы двигать объект как целое
-    p -= vec3(0.0, 0.08, 0.0);
-
     vec4 res = sdBody(p, color);
 
     vec4 eye = sdEye(p);
