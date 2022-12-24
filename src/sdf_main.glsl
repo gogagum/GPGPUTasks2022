@@ -1,4 +1,3 @@
-
 // sphere with center in (0, 0, 0)
 float sdSphere(vec3 p, float r)
 {
@@ -44,22 +43,22 @@ vec4 sdBody(vec3 p, vec3 color)
     float d = 1e10;
 
     // body, two spheres with smoothmin
-    float d_low = sdSphere((p - vec3(0.0, 0.35, -0.7)), 0.35);
-    float d_high = sdSphere((p - vec3(0.0, 0.65, -0.7)), 0.25);
+    float d_low = sdSphere((p - vec3(0.0, 0.45, -0.7)), 0.35);
+    float d_high = sdSphere((p - vec3(0.0, 0.75, -0.7)), 0.25);
 
     d = smoothmin(d_low, d_high, 12.);
 
 
     // hands, two capsules, can wave with lazycos
     float leftHand = sdCapsule(p,
-                               vec3(0.3, 0.55, -0.7),
-                               vec3(0.4, 0.45, -0.7),
+                               vec3(0.3, 0.65, -0.7),
+                               vec3(0.4, 0.55, -0.7),
                                0.06);
 
-    vec3 rightHandEnd = vec3(-0.4, 0.55 + 0.15 * lazycos(8.0 * iTime), -0.7);
+    vec3 rightHandEnd = vec3(-0.4, 0.65 + 0.15 * lazycos(8.0 * iTime), -0.7);
 
     float rightHand = sdCapsule(p,
-                                vec3(-0.3, 0.55, -0.7),
+                                vec3(-0.3, 0.65, -0.7),
                                 rightHandEnd,
                                 0.06);
 
@@ -69,13 +68,13 @@ vec4 sdBody(vec3 p, vec3 color)
 
     // legs, two capsules
     float leftLeg = sdCapsule(p,
-                              vec3(-0.15, 0.45, -0.7),
-                              vec3(-0.15, 0.0, -0.7),
+                              vec3(-0.15, 0.55, -0.7),
+                              vec3(-0.15, 0.05, -0.7),
                               0.07);
 
     float rightLeg = sdCapsule(p,
-                              vec3(0.15, 0.45, -0.7),
-                              vec3(0.15, 0.0, -0.7),
+                              vec3(0.15, 0.55, -0.7),
+                              vec3(0.15, 0.05, -0.7),
                               0.07);
 
     float legs = min(leftLeg, rightLeg);
@@ -88,7 +87,7 @@ vec4 sdBody(vec3 p, vec3 color)
 
 vec4 sdEyeBall(vec3 p)
 {
-    float d0 = sdSphere(p - vec3(0.0, 0.6, -0.5), 0.2);
+    float d0 = sdSphere(p - vec3(0.0, 0.7, -0.5), 0.2);
 
     // return distance and color
     return vec4(d0, vec3(1.0, 1.0, 1.0));
@@ -97,7 +96,7 @@ vec4 sdEyeBall(vec3 p)
 
 vec4 sdEyePupil(vec3 p)
 {
-    float d0 = sdSphere(p - vec3(0.0, 0.6, -0.30), 0.06);
+    float d0 = sdSphere(p - vec3(0.0, 0.7, -0.30), 0.06);
 
     // return distance and color
     return vec4(d0, vec3(0.0, 0.0, 0.0));
@@ -106,7 +105,7 @@ vec4 sdEyePupil(vec3 p)
 
 vec4 sdEyeIris(vec3 p)
 {
-    float d0 = sdSphere(p - vec3(0.0, 0.6, -0.39), 0.12);
+    float d0 = sdSphere(p - vec3(0.0, 0.7, -0.39), 0.12);
 
     // return distance and color
     return vec4(d0, vec3(0.0, 1.0, 1.0));
