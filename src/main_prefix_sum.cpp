@@ -33,7 +33,7 @@ int main(int argc, char **argv)
     context.activate();
 
 	int benchmarkingIters = 10;
-    unsigned int max_n = (1 << 20);
+    unsigned int max_n = (1 << 24);
 
     for (unsigned int n = 2; n <= max_n; n *= 2) {
 		std::cout << "______________________________________________" << std::endl;
